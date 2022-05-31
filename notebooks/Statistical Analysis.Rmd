@@ -1,0 +1,730 @@
+---
+title: "Statistical Analysis"
+author: "Francesco Pisu"
+date: '2022-04-13'
+output: html_document
+---
+
+```{r}
+library("DescTools")
+```
+
+
+```{r}
+train = read.csv('../input/train.csv')
+external = read.csv('../input/external.csv')
+```
+
+
+# Derivation cohort
+```{r}
+s1 <- train[1:123, ]
+s2 <- train[201:240, ]
+pop <- rbind(s1, s2)
+
+pos <- pop[pop$symptoms == 1,]
+neg <- pop[pop$symptoms == 0,]
+
+postrain <- train[train$symptoms == 1,]
+negtrain <- train[train$symptoms == 0,]
+
+pvalues <- list()
+```
+
+```{r}
+MedianCI(pop[, "age"], R = 2000)
+```
+
+
+## Binary Variables
+
+### Age
+```{r}
+varname <- "age"
+MedianCI(pos[, varname], method="boot", R = 2000)
+MedianCI(neg[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(pos[, varname], neg[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Gender
+```{r}
+varname <- "gender"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Hypertension
+```{r}
+varname <- "hypertension"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### CAD
+```{r}
+varname <- "CAD"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Smoker
+```{r}
+varname <- "smoker"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Diabetes
+```{r}
+varname <- "diabetes"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)),
+               )
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+
+### Dyslipidemia
+```{r}
+varname <- "lipids"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Stenosis
+```{r}
+varname <- "stenosis"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Presence of IPH
+```{r}
+varname <- "iph"
+
+table(train[, varname])
+
+table(postrain[, varname])
+prop.table(table(postrain[, varname]))
+
+table(negtrain[, varname])
+prop.table(table(negtrain[, varname]))
+
+posf <- postrain[postrain[, varname] == 1,]
+negf <- negtrain[negtrain[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(postrain), nrow(negtrain)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+
+## Continuous Variables
+```{r}
+install.packages("olsrr")
+install.packages("DescTools")
+library("olsrr")
+library("ggplot2")
+library("DescTools")
+```
+
+### Total Plaque Volume
+```{r}
+varname <- "plaque_volume"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Lipid Volume
+```{r}
+varname <- "lipid_volume"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Mixed Volume
+```{r}
+varname <- "mixed_volume"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+### Calcium Volume
+```{r}
+varname <- "calcium_volume"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### IPH Volume
+```{r}
+varname <- "iph_volume"
+MedianCI(postrain[, varname], method="exact", R = 2000)
+MedianCI(negtrain[, varname], method="exact", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+#pvalues <- append(pvalues, r$p.value)
+```
+
+### Lipid - IPH Volume
+```{r}
+varname <- "lipid_minus_iph"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### % Lipid volume
+```{r}
+varname <- "perc_lipid"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### % Mixed volume
+```{r}
+varname <- "perc_mixed"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### % Calcium volume
+```{r}
+varname <- "perc_calcium"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### % IPH volume
+```{r}
+varname <- "perc_iph"
+MedianCI(postrain[, varname], method="exact", R = 2000)
+MedianCI(negtrain[, varname], method="exact", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+
+
+### % Lipid - IPH volume
+```{r}
+varname <- "perc_lipid_minus_iph"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+
+### IPH to Lipid volume ratio
+```{r}
+varname <- "iph_total_lipid_ratio"
+MedianCI(postrain[, varname], method="exact", R = 2000)
+MedianCI(negtrain[, varname], method="exact", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+```{r}
+p.adjust(pvalues, method="BH")
+```
+
+
+# External Validation Cohort
+```{r}
+pos <- external[external$symptoms == 1,]
+neg <- external[external$symptoms == 0,]
+
+pop <- external
+
+postrain <- external[external$symptoms == 1,]
+negtrain <- external[external$symptoms == 0,]
+
+pvalues <- list()
+```
+
+## Binary Variables
+
+### Age
+```{r}
+varname <- "age"
+MedianCI(pos[, varname], method="boot", R = 2000)
+MedianCI(neg[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(pos[, varname], neg[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Gender
+```{r}
+varname <- "gender"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Hypertension
+```{r}
+varname <- "hypertension"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### CAD
+```{r}
+varname <- "CAD"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Smoker
+```{r}
+varname <- "smoker"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Diabetes
+```{r}
+varname <- "diabetes"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)),
+               )
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+
+### Dyslipidemia
+```{r}
+varname <- "lipids"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+```{r}
+varname <- "symptoms"
+
+table(train[, varname])
+```
+
+### Stenosis
+```{r}
+varname <- "stenosis"
+
+table(pop[, varname])
+
+table(pos[, varname])
+prop.table(table(pos[, varname]))
+
+table(neg[, varname])
+prop.table(table(neg[, varname]))
+
+posf <- pos[pos[, varname] == 1,]
+negf <- neg[neg[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(pos), nrow(neg)))
+r
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Presence of IPH
+```{r}
+varname <- "iph"
+
+table(pop[, varname])
+
+table(postrain[, varname])
+prop.table(table(postrain[, varname]))
+
+table(negtrain[, varname])
+prop.table(table(negtrain[, varname]))
+
+posf <- postrain[postrain[, varname] == 1,]
+negf <- negtrain[negtrain[, varname] == 1,]
+
+r <- prop.test(c(nrow(posf), nrow(negf)), c(nrow(postrain), nrow(negtrain)))
+r
+#pvalues <- append(pvalues, r$p.value)
+```
+
+
+## Continuous Variables
+
+### Total Plaque Volume
+```{r}
+varname <- "plaque_volume"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Lipid Volume
+```{r}
+varname <- "lipid_volume"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### Mixed Volume
+```{r}
+varname <- "mixed_volume"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+### Calcium Volume
+```{r}
+varname <- "calcium_volume"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### IPH Volume
+```{r}
+varname <- "iph_volume"
+MedianCI(postrain[, varname], method="exact")
+MedianCI(negtrain[, varname], method="exact")
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+
+### Lipid - IPH Volume
+```{r}
+varname <- "lipid_minus_iph"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### % Lipid volume
+```{r}
+varname <- "perc_lipid"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### % Mixed volume
+```{r}
+varname <- "perc_mixed"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### % Calcium volume
+```{r}
+varname <- "perc_calcium"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+### % IPH volume
+```{r}
+varname <- "perc_iph"
+MedianCI(postrain[, varname], method="exact", R = 2000)
+MedianCI(negtrain[, varname], method="exact", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+
+
+### % Lipid - IPH volume
+```{r}
+varname <- "perc_lipid_minus_iph"
+MedianCI(postrain[, varname], method="boot", R = 2000)
+MedianCI(negtrain[, varname], method="boot", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+
+### IPH to Lipid volume ratio
+```{r}
+varname <- "iph_total_lipid_ratio"
+MedianCI(postrain[, varname], method="exact", R = 2000)
+MedianCI(negtrain[, varname], method="exact", R = 2000)
+
+r <- wilcox.test(postrain[, varname], negtrain[, varname])
+r
+
+pvalues <- append(pvalues, r$p.value)
+```
+
+```{r}
+round(p.adjust(pvalues, method="BH"), digits=2)
+round(p.adjust(pvalues, method="BH"), digits=3)
+```
+
+
+
+
+
+
+
