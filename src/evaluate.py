@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from typing import Dict, Callable, List, Tuple, Any
 from functools import partial
 from sklearn.metrics import (
@@ -9,10 +10,11 @@ from sklearn.metrics import (
     average_precision_score
 )
 from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
 from yacs.config import CfgNode
 from collections import defaultdict
-from optuna.integration import OptunaSearchCV
-
+from interpret.glassbox import ExplainableBoostingClassifier
+from tqdm import tqdm
 from src._typing import ArrayLike, CVScheme, Estimator
 from src.utils.scoring import (
     compute_conf_matrix_metric,
@@ -92,11 +94,11 @@ def test_performance(conf: CfgNode,
         A dictionary of metrics values computed on the test set.
     """
     # fit scaler on train data and apply scaling to test data
-    scaler = StandardScaler()
-    X_train, y_train = load_data(conf, which='train')
-    numeric_cols = X_train.select_dtypes(include=np.float64).columns.tolist()
-    scaler.fit(X_train[numeric_cols])
-    X_test.loc[:, numeric_cols] = scaler.transform(X_test[numeric_cols])
+    # scaler = StandardScaler()
+    # X_train, y_train = load_data(conf, which='train')
+    # numeric_cols = X_train.select_dtypes(include=np.float64).columns.tolist()
+    # scaler.fit(X_train[numeric_cols])
+    # X_test.loc[:, numeric_cols] = scaler.transform(X_test[numeric_cols])
 
     # Predict on test set
     pred_probas_test = model.predict_proba(X_test)
@@ -126,103 +128,89 @@ def test_performance(conf: CfgNode,
     return out
 
 
-def nested_cv(algorithms: Dict[str, Estimator],
-              parameters: Dict[str, Any],
-              X: ArrayLike,
-              y: ArrayLike,
-              outer_cv: CVScheme,
-              inner_cv: CVScheme,
-              conf: CfgNode) -> List[Tuple[Estimator, Dict, Dict]]:
+def cross_validate(X: ArrayLike,
+                   y: ArrayLike,
+                   cv: CVScheme,
+                   conf: CfgNode) -> List[Tuple[Estimator, Dict, Dict]]:
     """
-    Perform nested cross-validation of a binary LightGBM classifier
-    with inner model selection through bayesian optimization with the Optuna framework.
+    Estimate generalization performance through cross-validation.
 
     Parameters
     ----------
-    algorithms: Dict[str, Estimator]
-        A dictionary of estimators with fixed parameters.
-    parameters: Dict[str, Any]
-        Fixed parameters and search spaces for each algorithm.
     X: ArrayLike of shape (n_obs, n_features)
         A design matrix of feature values.
     y: ArrayLike of shape (n_obs,)
         An array of ground-truths.
-    outer_cv: CVScheme
-        A cross-validation scheme for outer model evaluation.
-    inner_cv: CVScheme
-        A cross-validation scheme for inner model evaluation.
+    cv: CVScheme
+        A cross-validation scheme for model evaluation.
     conf: CfgNode
         A yacs configuration node to access configuration values.
 
     Returns
     -------
-    Tuple[lgb.Booster, Dict, Dict]
-        A tuple consisting of the best LightGBM booster and associated
-        parameters after hyperparameter tuning and the results of
-        outer the cross-validation evaluation, for each estimator.
+    Tuple[Dict, Dict]
+        A tuple consisting of average values of evaluation metrics and
+        predicted probabilities for each subject (out-of-fold).
     """
+    pd.options.mode.chained_assignment = None
     results = defaultdict(list)
     preds = dict()
 
     eval_metrics = get_evaluation_metrics()
 
-    for algo_name, algo in algorithms.items():
-        opt_search = OptunaSearchCV(estimator=algo,
-                                    param_distributions=parameters[algo_name]['space'],
-                                    cv=inner_cv,
-                                    n_trials=conf.TUNING.N_TRIALS,
-                                    random_state=conf.MISC.SEED,
-                                    refit=True,
-                                    scoring=conf.TUNING.METRIC,
-                                    n_jobs=1,
-                                    )
-        # preds[algo_name] = {"gt": [], "proba": []}
-        preds[algo_name] = dict()
-        curr_algo_outer_gts = []
-        curr_algo_outer_probas = []
 
-        for i, (train_idx, test_idx) in enumerate(outer_cv.split(X, y)):
-            Xtrain, ytrain = X.iloc[train_idx], y.loc[train_idx]
-            Xtest, ytest = X.loc[test_idx], y.loc[test_idx]
+    preds["EBM"] = dict()
+    gts = []
+    probas = []
 
-            # scale numeric variables
-            numeric_cols = Xtrain.select_dtypes(include=np.float64).columns.tolist()
-            scaler = StandardScaler()
-            Xtrain.loc[:, numeric_cols] = scaler.fit_transform(Xtrain.loc[:, numeric_cols])
-            Xtest.loc[:, numeric_cols] = scaler.transform(Xtest.loc[:, numeric_cols])
+    for i, (train_idx, test_idx) in tqdm(enumerate(cv.split(X, y)), total=cv.get_n_splits(X, y)):
+        Xtrain, ytrain = X.iloc[train_idx], y.loc[train_idx]
+        Xtest, ytest = X.loc[test_idx], y.loc[test_idx]
 
-            # run hyperparameter tuning
-            opt_search.fit(Xtrain, ytrain)
+        # instantiate EBM
+        model = ExplainableBoostingClassifier(random_state=conf.MISC.SEED,
+                                              interactions=6,
+                                              learning_rate=0.01,
+                                              min_samples_leaf=2,
+                                              outer_bags=25,
+                                              inner_bags=25,
+                                              max_bins=64,
+                                              max_leaves=5,
+                                              n_jobs=10)
 
-            # retrieve best estimator for current fold
-            best = opt_search.best_estimator_
+        # scale numeric variables
+        # numeric_cols = Xtrain.select_dtypes(include=np.float64).columns.tolist()
+        # scaler = StandardScaler()
+        # Xtrain.loc[:, numeric_cols] = scaler.fit_transform(Xtrain.loc[:, numeric_cols])
+        # Xtest.loc[:, numeric_cols] = scaler.transform(Xtest.loc[:, numeric_cols])
 
-            # predict on both sets
-            train_preds = best.predict_proba(Xtrain)
-            test_preds = best.predict_proba(Xtest)
+        # run hyperparameter tuning
+        model.fit(Xtrain, ytrain)
 
-            # accumulate ground-truths and predicted probabilities
-            # preds[algo_name]['gt'].append(ytest)
-            # preds[algo_name]['proba'].append(test_preds)
-            curr_algo_outer_gts.append(ytest)
-            curr_algo_outer_probas.append(test_preds)
+        # predict on both sets
+        train_preds = model.predict_proba(Xtrain)
+        test_preds = model.predict_proba(Xtest)
 
-            # compute evaluation metrics
-            train_scores = compute_metrics(train_preds, ytrain, eval_metrics)
-            test_scores = compute_metrics(test_preds, ytest, eval_metrics)
+        # pool ground-truths and predicted probabilities
+        gts.append(ytest)
+        probas.append(test_preds)
 
-            # save scores
-            for s, scores_dict in zip(conf.EVAL.SET_NAMES, [train_scores, test_scores]):
-                for metric_name, score in scores_dict.items():
-                    key = "{}_{}_{}".format(algo_name, s, metric_name)
-                    results[key].append(score)
+        # compute evaluation metrics
+        train_scores = compute_metrics(train_preds, ytrain, eval_metrics)
+        test_scores = compute_metrics(test_preds, ytest, eval_metrics)
+
+        # save scores
+        for s, scores_dict in zip(conf.EVAL.SET_NAMES, [train_scores, test_scores]):
+            for metric_name, score in scores_dict.items():
+                key = "{}_{}_{}".format("EBM", s, metric_name)
+                results[key].append(score)
 
         # concatenate ground-truths and predicted probabilities
-        preds[algo_name] = {
-            "gt_conc": np.concatenate(curr_algo_outer_gts),
-            "probas_conc": np.concatenate(curr_algo_outer_probas),
-            "gt": curr_algo_outer_gts,
-            "probas": curr_algo_outer_probas,
+        preds["EBM"] = {
+            "gt_conc": np.concatenate(gts),
+            "probas_conc": np.concatenate(probas),
+            "gt": gts,
+            "probas": probas,
         }
 
     # compute confidence intervals based on the percentile method.

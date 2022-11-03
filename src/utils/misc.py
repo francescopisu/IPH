@@ -25,24 +25,18 @@ def show_cross_val_results(cross_val_results: Dict[str, Tuple[float, float, floa
         A dataframe showing cross-validation results with median - [CI lower, CI upper]
         for each metric and set.
     """
-    # results = defaultdict(list)
     tuples = list(product(conf.EVAL.ALGO_SHORT_NAMES, conf.EVAL.SET_NAMES))
 
     header = pd.MultiIndex.from_tuples(tuples, names=["Algorithm", "Set"])
     index = conf.EVAL.METRIC_NAMES
     results = pd.DataFrame(columns=header, index=index)
-    # results.to_csv(conf.OUTPUT.RESULTS_PATH + "/empty.csv", index_label=['Algorithm', "Set"])
 
     for key, (med, lower_ci, upper_ci) in cross_val_results.items():
         algo_name, set_name, metric_name = key.split("_")
         print(algo_name, set_name, metric_name)
 
         results.loc[metric_name, (algo_name, set_name)] = f"{med} [{lower_ci}-{upper_ci}]"
-
-    # output = pd.DataFrame.from_dict(results)
-    # output.index = metric_names[:math.floor(len(metric_names) / 2)]
-    print(results)
-    # exit(1)
+    
     return results
 
 
