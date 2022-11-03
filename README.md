@@ -1,4 +1,4 @@
-# An Interpretable Machine Learning Approach to Stroke Prediction from Anatomical Features of Carotid Plaques
+# An Interpretable Machine Learning Approach to Identify Subjects with Recent Cerebrovascular Symptoms from Anatomical Features of Carotid Plaques
 This repository contains the code to reproduce the experiments of "An Interpretable Machine Learning Approach to Identify Patients with Recent Cerebrovascular Symptoms from Anatomical Features of Carotid Plaques", currently under review at European Heart Journal: Cardiovascular Imaging.
 
 ## Abstract
