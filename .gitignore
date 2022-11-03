@@ -9,6 +9,7 @@ __pycache__/
 .Rhistory
 .RData
 input/
+output/results/.DS_Store
 
 # Distribution / packaging
 .Python

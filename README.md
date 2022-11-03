@@ -98,14 +98,6 @@ For each evaluation metric (which are specified in `src/evaluate.py`), median an
 
 In general, this project is set up to handle three different datasets: training set, internal test set and external test set. The test function should be used to compute performance on either internal or external test sets. By default, the `--which` argument accepts either `internal` or `external` values, which are connected to specific dataset filenames through the default configuration file (e.g., internal value is connected to the DATA.TEST_DATA_PATH whereas external value is connected to DATA.EXTERNAL_DATA_PATH).
 
-### Plot ROC and Precision-recall curves of the nested cross-validation
-```
-python3 execute_cli.py plot-ncv-roc-and-pr-curves --exp_name <EXPERIMENT NAME> --exp_names <EXPERIMENT NAMES> --plot_title <PLOT TITLE> --output_filename <FILENAME OF PLOT>
-```
-This command generates ROC and precision-recall curves based on predicted probabilities of the outer cross-validation of the nested procedure of the experiment specified via `--exp_name` argument. The resulting plot is saved in .pdf format at `output/plots/ncv_roc_pr_curves_<FILENAME OF PLOT>.pdf`.
-
-Alternatively, two different experiment names can be specified via `--exp_names` argument, separated by space. For each experiment, a pair of ROC and precision-recall curves is generated in each row. In addition, an optional argument `--plot_title` can be used to specify the main title for the figure.
-
 
 ### Get predicted probabilities of an optimized model on a specific set
 ```
