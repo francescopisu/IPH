@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/498276564.svg)](https://zenodo.org/badge/latestdoi/498276564)
+
 # An Interpretable Machine Learning Approach to Identify Subjects with Recent Cerebrovascular Symptoms from Anatomical Features of Carotid Plaques
 This repository contains the code to reproduce the experiments of "An Interpretable Machine Learning Approach to Identify Patients with Recent Cerebrovascular Symptoms from Anatomical Features of Carotid Plaques", currently under review at European Heart Journal: Cardiovascular Imaging.
 
