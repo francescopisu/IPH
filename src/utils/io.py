@@ -38,8 +38,14 @@ def load_data(conf: CfgNode, which: str = 'train') -> Tuple[ArrayLike, ArrayLike
     data = pd.read_csv(data_path)
 
     X, y = data.drop(conf.DATA.TARGET, axis=1), data[conf.DATA.TARGET]
-    if conf.DATA.ON_SUBSET:
-        X = X[conf.DATA.DEMOGRAPHICS]
+    # subset data if necessary
+    if conf.DATA.SUBSET_DATA:
+        if conf.DATA.WHICH_SUBSET == "clinical":
+            X = X[conf.DATA.CLINICAL_SUBSET]
+        elif conf.DATA.WHICH_SUBSET == "plaque":
+            X = X[conf.DATA.PLAQUE_SUBSET]
+        elif conf.DATA.WHICH_SUBSET == "only_ratio":
+            X = X[conf.DATA.ONLY_RATIO]
 
     return X, y
 

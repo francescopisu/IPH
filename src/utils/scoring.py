@@ -2,34 +2,11 @@
 This file defines methods for computing evaluation metrics of interest.
 """
 import numpy as np
-import lightgbm as lgb
 from typing import Dict, Callable, Tuple
 from sklearn.metrics import confusion_matrix, brier_score_loss
 import scikits.bootstrap as boot
 
 from src._typing import ConfMatrixQuant, Seed, ArrayLike
-
-
-def _brier_loss(y_true: ArrayLike, y_pred: ArrayLike) -> Tuple[str, float, bool]:
-    """
-    Custom evaluation metric for LightGBM training that computes
-    the brier score loss. Lower values are better.
-
-    Parameters
-    ----------
-    y_pred: ArrayLike
-        Predictions of the positive class.
-    dtrue: lgb.Dataset
-        The dataset corresponding to the ground-truths.
-
-    Returns
-    -------
-    Tuple[str, float, bool]
-        A tuple consisting of metric name, value and whether higher
-        values are better or not.
-    """
-    loss = brier_score_loss(y_true, y_pred)
-    return "brier_loss", -1 * loss, True
 
 
 def compute_conf_matrix(target_labels: ArrayLike,

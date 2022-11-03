@@ -3,7 +3,21 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
+        <entry key="/input/OLD/test.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="/input/external.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="/input/plaque_volume_loess.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -17,98 +31,91 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/predictions/external_test_preds.csv">
+        <entry key="/output/results/With scaling/cv_results_all.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/predictions/external_test_preds_LGBM_final.csv">
+        <entry key="/output/results/With scaling/cv_results_logreg_only_plaque.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/predictions/external_test_preds_LGBM_only_demographics.csv">
+        <entry key="/output/results/With scaling/cv_results_logreg_only_ratio.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/predictions/external_test_preds_LGBM_tuned_merged_10outer_100.csv">
+        <entry key="/output/results/With scaling/cv_results_only_clinical.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/predictions/external_test_preds_LGBM_tuned_merged_10outer_100_backup.csv">
+        <entry key="/output/results/With scaling/cv_results_only_plaqu.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/predictions/external_test_preds_RF_only_demographics.csv">
+        <entry key="/output/results/With scaling/cv_results_only_plaque_no_iph.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/predictions/internal_test_preds.csv">
+        <entry key="/output/results/With scaling/cv_results_only_plaque_no_ratio.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/results/external_test_results_LGBM_002lr_500.csv">
+        <entry key="/output/results/With scaling/cv_results_only_ratio.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/results/external_test_results_LGBM_final.csv">
+        <entry key="/output/results/cv_results_all.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/results/external_test_results_LGBM_final_backup.csv">
+        <entry key="/output/results/cv_results_only_clinical.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/results/external_test_results_LGBM_tuned_merged_10outer_100.csv">
+        <entry key="/output/results/cv_results_only_plaque.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/results/external_test_results_LGBM_tuned_merged_10outer_500.csv">
+        <entry key="/output/results/cv_results_only_ratio.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="/output/results/ncv_results_only_demographic.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="/output/results/ncv_results_test8_10outer.csv">
+        <entry key="/output/results/external_test_results_ebm.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

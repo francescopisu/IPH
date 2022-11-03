@@ -7,17 +7,15 @@ import time
 import numpy as np
 import pandas as pd
 import click
-from sklearn.model_selection import StratifiedKFold, RepeatedStratifiedKFold
+from sklearn.model_selection import RepeatedStratifiedKFold
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 
 from config.defaults import get_defaults
 from src.utils.io import load_data, load_obj, save_obj
 from src.utils.misc import add_extension, show_cross_val_results
-from src.evaluate import nested_cv, get_evaluation_metrics, test_performance
-from src.tune import tune_model
-from src.algorithms import ALGORITHMS
-from src.spaces import PARAMETERS
+from src.evaluate import cross_validate, get_evaluation_metrics, test_performance
+from src.train import train_model
 from src.utils.plotting import plot_average_roc_curves, plot_average_pr_curves
 
 
@@ -50,7 +48,7 @@ def bootstrap(new_options: Optional[List] = None,
 
     # load datasets
     which = 'train'  # default
-    if mode in ['train', 'ncv']:
+    if mode in ['train', 'cv']:
         which = 'train'
     elif mode == 'internal_test':
         which = 'test'
@@ -67,14 +65,7 @@ def bootstrap(new_options: Optional[List] = None,
     params = None
     algorithms = None
 
-    if mode == 'ncv':
-        algorithms = ALGORITHMS
-        params = PARAMETERS
-    elif mode == 'tune':
-        # set parameters of chosen algorithm
-        params = PARAMETERS[defaults.TUNING.ALGORITHM_TO_TUNE]['space']
-        model = ALGORITHMS[defaults.TUNING.ALGORITHM_TO_TUNE]
-    elif mode in ['internal_test', 'external_test']:
+    if mode in ['internal_test', 'external_test']:
         # load model from defaults.OUTPUT.FITTED_MODEL_PATH
         model = load_obj(defaults.OUTPUT.FITTED_MODEL_PATH)
 
@@ -82,8 +73,6 @@ def bootstrap(new_options: Optional[List] = None,
         "data": (X, y),
         "defaults": defaults,
         "model": model,
-        "params": params,
-        "algorithms": algorithms
     }
 
 
@@ -92,14 +81,36 @@ def cli():
     pass
 
 
-# @click.command()
-# def data_bootstrap():
-#     """
-#     Command to load the data, split the data into
-#     training and test set and apply basic preprocessing.
-#     """
-#     defaults = get_defaults()
-#     load_split_preprocess(defaults)
+@click.command()
+@click.option('--fitted_model_filename', default="model.pkl")
+def train(fitted_model_filename):
+    """
+    Train the model on the training set and save the fitted model to
+    output/fitted_models/<fitted_model_filename>.pkl directory.
+
+    fitted_model_filename is used as follows:
+        a) to update the fitted_model_path from output/fitted_models/model.pkl (default)
+        to output/fitted_models/<fitted_model_filename> in order to dump the fitted model.
+    """
+    click.echo("Mode: training.\n")
+    defaults = get_defaults()
+
+    fitted_model_filename = add_extension(fitted_model_filename)
+
+    # derive final path for fitted model as base output path for fitted models + model filename
+    fitted_model_path = os.path.join(defaults.OUTPUT.FITTED_MODELS_PATH, fitted_model_filename)
+
+    new_options = ["OUTPUT.FITTED_MODEL_PATH", fitted_model_path]
+
+    boot_data = bootstrap(new_options, mode="train")
+    defaults = boot_data['defaults']
+
+    X_train, y_train = boot_data['data']
+    fitted_model = train_model(X_train, y_train, defaults)
+
+    # dump fitted model
+    os.makedirs(defaults.OUTPUT.FITTED_MODELS_PATH, exist_ok=True)
+    save_obj(fitted_model, defaults.OUTPUT.FITTED_MODEL_PATH)
 
 
 @click.command()
@@ -154,7 +165,7 @@ def test(which, fitted_model_filename):
 
 @click.command()
 @click.option('--exp_name', default="exp_1")
-def nested_cross_validation(exp_name):
+def cross_validation(exp_name):
     """
     Model selection and evaluation by means of nested cross-validation.
 
@@ -162,7 +173,7 @@ def nested_cross_validation(exp_name):
         a) to update the fitted_model_path from output/fitted_models/model.pkl (default)
         to output/fitted_models/<fitted_model_filename> in order to dump the fitted model.
     """
-    click.echo("Mode: Nested cross-validation.")
+    click.echo("Mode: Cross-validation.")
     # defaults = get_defaults()
 
     # fitted_model_filename = add_extension(fitted_model_filename)
@@ -172,27 +183,19 @@ def nested_cross_validation(exp_name):
     # new_options = ["OUTPUT.FITTED_MODEL_PATH", fitted_model_path]
 
     # don't reserve dev set at this point since we need to do it in each cv fold
-    boot_data = bootstrap(new_options=None, mode="ncv")
+    boot_data = bootstrap(new_options=None, mode="cv")
 
-    parameters = boot_data['params']
-    algorithms = boot_data['algorithms']
     defaults = boot_data['defaults']
     X_train, y_train = boot_data['data']
 
-    inner_cv = StratifiedKFold(n_splits=defaults.EVAL.INNER_N_SPLITS,
-                               shuffle=defaults.EVAL.SHUFFLE,
-                               random_state=defaults.MISC.SEED)
-    outer_cv = RepeatedStratifiedKFold(n_splits=defaults.EVAL.OUTER_N_SPLITS,
-                                       n_repeats=defaults.EVAL.N_REPEATS,
-                                       random_state=defaults.MISC.SEED)
+    cv = RepeatedStratifiedKFold(n_splits=defaults.EVAL.N_SPLITS,
+                                 n_repeats=defaults.EVAL.N_REPEATS,
+                                 random_state=defaults.MISC.SEED)
 
     s = time.time()
-    outer_results, outer_preds = nested_cv(algorithms=algorithms,
-                                           parameters=parameters,
-                                           X=X_train, y=y_train,
-                                           outer_cv=outer_cv,
-                                           inner_cv=inner_cv,
-                                           conf=defaults)
+    outer_results, outer_preds = cross_validate(X=X_train, y=y_train,
+                                                cv=cv,
+                                                conf=defaults)
     print("Execution time: %s seconds." % (time.time() - s))
 
     # dump results
@@ -201,64 +204,12 @@ def nested_cross_validation(exp_name):
 
     outer_results_formatted = show_cross_val_results(outer_results, conf=defaults)
 
-    # os.makedirs(defaults.OUTPUT.FITTED_MODELS_PATH, exist_ok=True)
-    # save_obj(final_model, defaults.OUTPUT.FITTED_MODEL_PATH)
-
-    # best_model_path = os.path.join(defaults.OUTPUT.FITTED_MODELS_PATH,
-    #                                "{}.txt".format(fitted_model_filename.split('.')[0]))
-    # final_model.save_model(best_model_path)
-
-    # save_obj(best_params, fitted_model_best_params_path)
-
-    # save_obj(outer_results, ncv_results_path)
-    ncv_results_path = os.path.join(defaults.OUTPUT.RESULTS_PATH, "ncv_results_{}.csv".format(exp_name))
-    outer_results_formatted.to_csv(ncv_results_path)
+    cv_results_path = os.path.join(defaults.OUTPUT.RESULTS_PATH, "cv_results_{}.csv".format(exp_name))
+    outer_results_formatted.to_csv(cv_results_path)
 
     # save predictions
-    outer_preds_path = os.path.join(defaults.OUTPUT.PREDS_PATH, "outer_cv_accumulated_preds_{}.pkl".format(exp_name))
+    outer_preds_path = os.path.join(defaults.OUTPUT.PREDS_PATH, "cv_pooled_preds_{}.pkl".format(exp_name))
     save_obj(outer_preds, outer_preds_path)
-
-
-@click.command()
-@click.option('--algorithm', default="LGBM")
-@click.option('--fitted_model_filename', default="model.pkl")
-def tune(algorithm, fitted_model_filename):
-    """
-    Perform hyperparameter tuning of the specified algorithm.
-    """
-    click.echo("Mode: tuning.\n")
-    defaults = get_defaults()
-
-    fitted_model_filename = add_extension(fitted_model_filename)
-
-    # derive final path for fitted model as base output path for fitted models + model filename
-    fitted_model_path = os.path.join(defaults.OUTPUT.FITTED_MODELS_PATH, fitted_model_filename)
-    new_options = ["OUTPUT.FITTED_MODEL_PATH", fitted_model_path,
-                   "TUNING.ALGORITHM_TO_TUNE", algorithm]
-    boot_data = bootstrap(new_options, mode="tune")
-
-    defaults = boot_data['defaults']
-    X_train, y_train = boot_data['data']
-    search_space = boot_data['params']
-    model = boot_data['model']
-
-    cv = RepeatedStratifiedKFold(n_splits=defaults.EVAL.OUTER_N_SPLITS,
-                                 n_repeats=defaults.EVAL.N_REPEATS,
-                                 random_state=defaults.MISC.SEED)
-
-    tuned_model, best_params = tune_model(model=model,
-                                          search_space=search_space,
-                                          X=X_train, y=y_train,
-                                          cv=cv,
-                                          conf=defaults)
-
-    # dump fitted model
-    fitted_model_best_params_path = os.path.join(defaults.OUTPUT.PARAMS_PATH,
-                                                 "best_params_{}".format(fitted_model_filename))
-
-    os.makedirs(defaults.OUTPUT.FITTED_MODELS_PATH, exist_ok=True)
-    save_obj(tuned_model, defaults.OUTPUT.FITTED_MODEL_PATH)
-    save_obj(best_params, fitted_model_best_params_path)
 
 
 @click.command()
@@ -304,90 +255,11 @@ def get_predictions(fitted_model_filename):
     pd.DataFrame(external_test_proba, columns=['target', 'proba']).to_csv(external_test_results_path, index=False)
 
 
-@click.command()
-@click.option('--exp_name')
-@click.option('--exp_names', nargs=2, type=str)
-@click.option('--plot_title')
-@click.option('--output_filename')
-def plot_ncv_roc_and_pr_curves(exp_name, exp_names, plot_title, output_filename):
-    defaults = get_defaults()
-    plot_path = os.path.join(defaults.OUTPUT.PLOTS_PATH, f"ncv_roc_pr_curves_{output_filename}.pdf")
 
-    if exp_names:
-        # load predictions corresponding to the specified experiment names
-        exp_name1, exp_name2 = exp_names
-        preds_path1 = os.path.join(defaults.OUTPUT.PREDS_PATH, f"outer_cv_accumulated_preds_{exp_name1}.pkl")
-        preds_path2 = os.path.join(defaults.OUTPUT.PREDS_PATH, f"outer_cv_accumulated_preds_{exp_name2}.pkl")
-        outer_cv_preds1 = load_obj(preds_path1)
-        outer_cv_preds2 = load_obj(preds_path2)
-
-        # f, axes = plt.subplots(2, 2, figsize=(16, 16))
-        #
-        # ax1 = plot_average_roc_curves(cv_preds=outer_cv_preds1, conf=defaults, ax=axes[0, 0])
-        # ax2 = plot_average_pr_curves(cv_preds=outer_cv_preds1, conf=defaults, ax=axes[0, 1])
-        # ax1.set_title("With plaque's features\n", fontsize=16)
-        # ax3 = plot_average_roc_curves(cv_preds=outer_cv_preds2, conf=defaults, ax=axes[1, 0],
-        #                               highlight_best=False)
-        # ax4 = plot_average_pr_curves(cv_preds=outer_cv_preds2, conf=defaults, ax=axes[1, 1],
-        #                              highlight_best=False)
-        # ax4.set_title("Using demographic and clinical variables only\n", fontsize=16)
-        #
-        # ax1.text(0, 1.03, "A", transform=ax1.transAxes, size=20, weight='bold')
-        # ax2.text(0, 1.03, "B", transform=ax2.transAxes, size=20, weight='bold')
-        # ax3.text(0, 1.03, "C", transform=ax3.transAxes, size=20, weight='bold')
-        # ax4.text(0, 1.03, "D", transform=ax4.transAxes, size=20, weight='bold')
-        #
-        # plt.suptitle(plot_title, fontsize=20, y=0.95)
-        f = plt.figure(constrained_layout=True, figsize=(15, 17))
-        f.suptitle(plot_title, fontsize=18, weight="normal")
-        f.set_constrained_layout_pads(w_pad=0.2, h_pad=0.15,
-                                      hspace=0.05, wspace=0. / 72.)
-
-        subfigs = f.subfigures(nrows=2, ncols=1)
-
-        subfigs[0].suptitle("With plaque morphology information", fontsize=15)
-        # create two subplots for the first subfigure
-        ax1, ax2 = subfigs[0].subplots(nrows=1, ncols=2)
-        ax1 = plot_average_roc_curves(cv_preds=outer_cv_preds1, conf=defaults, ax=ax1)
-        ax2 = plot_average_pr_curves(cv_preds=outer_cv_preds1, conf=defaults, ax=ax2, legend_position="lower right")
-
-        subfigs[1].suptitle("Demographic and clinical variables only", fontsize=15)
-        # create two subplots for the second subfigure
-        ax3, ax4 = subfigs[1].subplots(nrows=1, ncols=2)
-        ax3 = plot_average_roc_curves(cv_preds=outer_cv_preds2, conf=defaults, ax=ax3,
-                                      highlight_best=False)
-        ax4 = plot_average_pr_curves(cv_preds=outer_cv_preds2, conf=defaults, ax=ax4,
-                                     highlight_best=False)
-
-        ax1.text(0, 1.03, "A", transform=ax1.transAxes, size=20, weight='bold')
-        ax2.text(0, 1.03, "B", transform=ax2.transAxes, size=20, weight='bold')
-        ax3.text(0, 1.03, "C", transform=ax3.transAxes, size=20, weight='bold')
-        ax4.text(0, 1.03, "D", transform=ax4.transAxes, size=20, weight='bold')
-    else:
-        # load predictions corresponding to the specified experiment name
-        preds_path = os.path.join(defaults.OUTPUT.PREDS_PATH, f"outer_cv_accumulated_preds_{exp_name}.pkl")
-        outer_cv_preds = load_obj(preds_path)
-
-        f, axes = plt.subplots(1, 2, figsize=(16, 8))
-
-        ax1 = plot_average_roc_curves(cv_preds=outer_cv_preds, conf=defaults, ax=axes[0])
-        ax2 = plot_average_pr_curves(cv_preds=outer_cv_preds, conf=defaults, ax=axes[1])
-
-        ax1.text(0, 1.03, "A", transform=ax1.transAxes, size=20, weight='bold')
-        ax2.text(0, 1.03, "B", transform=ax2.transAxes, size=20, weight='bold')
-
-        plt.suptitle(plot_title, fontsize=15)
-
-    f.savefig(plot_path, format="pdf")
-
-
-# cli.add_command(data_bootstrap)
+cli.add_command(train)
 cli.add_command(test)
-cli.add_command(nested_cross_validation)
-cli.add_command(tune)
+cli.add_command(cross_validation)
 cli.add_command(get_predictions)
-cli.add_command(plot_ncv_roc_and_pr_curves)
-# cli.add_command(plot_test_roc_and_pr_curves)
 
 if __name__ == '__main__':
     cli()

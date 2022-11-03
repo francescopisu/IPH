@@ -23,9 +23,16 @@ _C.DATA.TO_SCALE = ['plaque_volume', 'iph_volume', 'lipid_minus_iph',
 _C.DATA.CAT_FEATURES = ['symptoms', 'iph', 'hypertension', 'CAD',
                         'smoker', 'gender', 'diabetes',
                         'lipids', 'stenosis']
-_C.DATA.DEMOGRAPHICS = ['hypertension', 'CAD', 'smoker', 'age', 'gender', 'diabetes',
-                        'lipids', 'stenosis']
-_C.DATA.ON_SUBSET = False
+_C.DATA.SUBSET_DATA = False
+_C.DATA.WHICH_SUBSET = "plaque"
+_C.DATA.CLINICAL_SUBSET = ['hypertension', 'CAD', 'smoker', 'age', 'gender', 'diabetes',
+                           'lipids', 'stenosis']
+_C.DATA.PLAQUE_SUBSET = ['plaque_volume', 'iph_volume', 'lipid_minus_iph',
+                         'lipid_volume', 'mixed_volume', 'calcium_volume', 'perc_lipid',
+                         'perc_mixed', 'perc_calcium', 'perc_iph', 'perc_lipid_minus_iph',
+                         'iph_total_lipid_ratio',
+                         'iph']
+_C.DATA.ONLY_RATIO = ['iph_total_lipid_ratio']
 
 # output
 _C.OUTPUT = CN()
@@ -43,28 +50,19 @@ _C.OUTPUT.TEST_RESULTS = os.path.join(_C.OUTPUT.RESULTS_PATH, "test_results.csv"
 
 # evaluation
 _C.EVAL = CN()
-_C.EVAL.INNER_N_SPLITS = 5
-_C.EVAL.OUTER_N_SPLITS = 10
+_C.EVAL.N_SPLITS = 10
 _C.EVAL.N_REPEATS = 10
 _C.EVAL.SHUFFLE = True
 _C.EVAL.ALPHA = 0.05
-_C.EVAL.BOOT_ROUNDS = 2000
-_C.EVAL.THRESHOLD = 0.5729885
+_C.EVAL.BOOT_ROUNDS = 5000
+# _C.EVAL.THRESHOLD = 0.5729885
+_C.EVAL.THRESHOLD = 0.23723600934486413
+# _C.EVAL.THRESHOLD = 0.5
 _C.EVAL.SET_NAMES = ["Train", "Valid"]
-_C.EVAL.ALGO_LONG_NAMES = ["Random Forest", "Light GBM", "SVC", "LogReg", "KNN"]
-_C.EVAL.ALGO_SHORT_NAMES = ["RF", "LGBM", "SVC", "LR", "KNN"]
+_C.EVAL.ALGO_SHORT_NAMES = ["EBM"]
+_C.EVAL.ALGO_LONG_NAMES = ["Explainable Boosting Classifier"]
 _C.EVAL.METRIC_NAMES = ["Sensitivity", "Specificity", "FPR", "FNR",
                         "Precision", "PPV", "NPV", "F1", "F2", "ROCAUC", "Brier"]
-
-# hyperparameter tuning
-_C.TUNING = CN()
-_C.TUNING.N_TRIALS = 100
-_C.TUNING.N_TRIALS_FINAL = 100
-_C.TUNING.EVAL_SIZE = 0.2
-# _C.TUNING.DIRECTION = 'maximize'
-# _C.TUNING.METRIC = 'roc_auc'
-_C.TUNING.METRIC = 'neg_brier_score'
-_C.TUNING.ALGORITHM_TO_TUNE = "LGBM"
 
 # misc
 _C.MISC = CN()

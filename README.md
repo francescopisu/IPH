@@ -1,8 +1,8 @@
 # An Interpretable Machine Learning Approach to Stroke Prediction from Anatomical Features of Carotid Plaques
-This repository contains the code to reproduce the experiments of "An Interpretable Machine Learning Approach to Stroke Prediction from Anatomical Features of Carotid Plaques", (under review).
+This repository contains the code to reproduce the experiments of "An Interpretable Machine Learning Approach to Identify Patients with Recent Cerebrovascular Symptoms from Anatomical Features of Carotid Plaques", currently under review at European Heart Journal: Cardiovascular Imaging.
 
 ## Abstract
-Coming soon..
+Carotid plaque structure and composition are known to be associated with stroke, but the role of subcomponents (e.g., intraplaque hemorrhage [IPH]) is yet to be determined. Consequently, learning to recognize symptomatic patients having atherosclerotic disease allows identifying plaque features that are predominant in symptomatic subjects. We hypothesized that Machine Learning (ML) could perform a more complex evaluation of a patient’s status, integrating plaque morphology data with clinical and demographic factors. However, the clinical application of ML models has suffered from the interpretability problem. Using an interpretable tree-based boosting generalized additive model trained on demographic, clinical and CT angiography-derived plaque features, we were able to identify symptomatic patients with excellent diagnostic accuracy both on internal validation (area under the curve: 0.886) and dedicated testing (0.926). Volumetric measurements of carotid plaque’s subcomponents (in particular the ratio of IPH to lipid volume) were the most important parameters for identifying symptomatic subjects.
 
 ## Repository structure:
 The repository is organized as follows:
@@ -48,14 +48,12 @@ In greater detail:
 - **config/**: this folder deals with experiment configuration.
   - *defaults.py*: default configuration values based on the YACS framework
 - **notebooks/**: python and R notebooks used to analyze experiments' results.
-  - *Comparing ROC AUCs.ipynb*: comparison of areas under the ROC curves of the classifiers' performance after nested cross-validation.
+  - *Statistical Analysis.ipynb*: code for all the statistical analysis reported in the manuscript.
   - *Preprocessing and conversion.ipynb*: basic preprocessing to training and test data and conversion of from excel to csv.
-  - *Interpreting predictions.ipynb*: application of SHAP and accumulated local effect frameworks to analyze final model's predictions and misclassifications.
-  - *Statistical Analysis.Rmd*: computation of baseline characteristics of the derivation and validation cohorts.
-  - *ROCandPRcurvesconfidenceintervals.Rmd*: computation of ROC and precision-recall curves, and confusion matrix-related metrics associated to the best operational point.
+  - *Baseline characteristics.Rmd*: computation of baseline characteristics of the derivation and validation cohorts.
+  - *LOESS analysis.Rmd*: code used to produce the LOESS curves when analyzing the relationships with the top influential features and model predictions.
 - **output/**: this folder contains output of the experiments.
   - fitted_models/: optimized models obtained after hyperparameter tuning.
-  - parameters/: parameters of each optimized model.
   - plots/: plots and figures to be included in the manuscript.
   - predictions/: predicted probabilities of the optimized models.
   - results/: results of the nested cross-validation procedure and performance on the validation cohort.
@@ -100,14 +98,6 @@ For each evaluation metric (which are specified in `src/evaluate.py`), median an
 
 In general, this project is set up to handle three different datasets: training set, internal test set and external test set. The test function should be used to compute performance on either internal or external test sets. By default, the `--which` argument accepts either `internal` or `external` values, which are connected to specific dataset filenames through the default configuration file (e.g., internal value is connected to the DATA.TEST_DATA_PATH whereas external value is connected to DATA.EXTERNAL_DATA_PATH).
 
-### Plot ROC and Precision-recall curves of the nested cross-validation
-```
-python3 execute_cli.py plot-ncv-roc-and-pr-curves --exp_name <EXPERIMENT NAME> --exp_names <EXPERIMENT NAMES> --plot_title <PLOT TITLE> --output_filename <FILENAME OF PLOT>
-```
-This command generates ROC and precision-recall curves based on predicted probabilities of the outer cross-validation of the nested procedure of the experiment specified via `--exp_name` argument. The resulting plot is saved in .pdf format at `output/plots/ncv_roc_pr_curves_<FILENAME OF PLOT>.pdf`.
-
-Alternatively, two different experiment names can be specified via `--exp_names` argument, separated by space. For each experiment, a pair of ROC and precision-recall curves is generated in each row. In addition, an optional argument `--plot_title` can be used to specify the main title for the figure.
-
 
 ### Get predicted probabilities of an optimized model on a specific set
 ```
@@ -119,3 +109,4 @@ This command computes probabilities for each sample in the specified set and sav
 
 * The code for comparing ROC AUCs using DeLong test is taken from the [Yandex School of Data Analysis github repository](https://github.com/yandexdataschool/roc_comparison).
 
+* The code for producing the observed vs. predicted plot is based on the [verhulst](https://github.com/grivescorbett/verhulst) package.
