@@ -158,10 +158,11 @@ def cross_validate(X: ArrayLike,
 
     eval_metrics = get_evaluation_metrics()
 
-
     preds["EBM"] = dict()
     gts = []
+    gts_train = []
     probas = []
+    probas_train = []
 
     for i, (train_idx, test_idx) in tqdm(enumerate(cv.split(X, y)), total=cv.get_n_splits(X, y)):
         Xtrain, ytrain = X.iloc[train_idx], y.loc[train_idx]
@@ -193,7 +194,9 @@ def cross_validate(X: ArrayLike,
 
         # pool ground-truths and predicted probabilities
         gts.append(ytest)
+        gts_train.append(ytrain)
         probas.append(test_preds)
+        probas_train.append(train_preds)
 
         # compute evaluation metrics
         train_scores = compute_metrics(train_preds, ytrain, eval_metrics)
@@ -205,13 +208,17 @@ def cross_validate(X: ArrayLike,
                 key = "{}_{}_{}".format("EBM", s, metric_name)
                 results[key].append(score)
 
-        # concatenate ground-truths and predicted probabilities
-        preds["EBM"] = {
-            "gt_conc": np.concatenate(gts),
-            "probas_conc": np.concatenate(probas),
-            "gt": gts,
-            "probas": probas,
-        }
+    # concatenate ground-truths and predicted probabilities
+    preds["EBM"] = {
+        "gt_conc": np.concatenate(gts),
+        "gt_conc_train": np.concatenate(gts_train),
+        "probas_conc": np.concatenate(probas),
+        "probas_conc_train": np.concatenate(probas_train),
+        "gt": gts,
+        "gt_train": gts_train,
+        "probas": probas,
+        "probas_train": probas_train 
+    }
 
     # compute confidence intervals based on the percentile method.
     results_with_cis = compute_cross_val_conf_intervals(results, alpha=conf.EVAL.ALPHA)
